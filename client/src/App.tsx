@@ -13,6 +13,8 @@ import AllProducts from "./pages/AllProducts";
 import GamesLibrary from "./pages/GamesLibrary";
 import Settings from "./pages/Settings";
 import CreateProject from "./pages/CreateProject";
+import BulkFactory from "./pages/BulkFactory";
+import Orders from "./pages/Orders";
 function Router() {
   return (
     <Switch>
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/create" component={CreateProject} />
       <Route path={"/marketplace/:id"} component={Marketplace} />
+      <Route path="/bulk" component={BulkFactory} />
+      <Route path="/orders" component={Orders} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

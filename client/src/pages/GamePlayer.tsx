@@ -1,6 +1,8 @@
 import { trpc } from "@/lib/trpc";
 import { useParams } from "wouter";
 import { useState, useEffect, useRef } from "react";
+import CrosswordGame from "@/components/games/CrosswordGame";
+import WordSearchGame from "@/components/games/WordSearchGame";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -604,6 +606,8 @@ export default function GamePlayer() {
       case "fill_blanks": return <FillBlanksGame config={config} onFinish={handleFinish} />;
       case "spelling_bee": return <SpellingBeeGame config={config} onFinish={handleFinish} />;
       case "sentence_scramble": return <SentenceScrambleGame config={config} onFinish={handleFinish} />;
+      case "crossword_game": return <CrosswordGame gameData={config} onComplete={(score) => handleFinish(score, 100, 0)} />;
+      case "word_search_game": return <WordSearchGame gameData={config} onComplete={(score) => handleFinish(score, 100, 0)} />;
       default: return <div className="text-center text-muted-foreground">Unknown game type: {game.type}</div>;
     }
   };
@@ -615,6 +619,8 @@ export default function GamePlayer() {
     fill_blanks: { emoji: "✏️", label: "Fill in the Blanks", color: "from-orange-500 to-orange-600" },
     spelling_bee: { emoji: "🐝", label: "Spelling Bee", color: "from-yellow-500 to-yellow-600" },
     sentence_scramble: { emoji: "🔀", label: "Sentence Scramble", color: "from-red-500 to-red-600" },
+    crossword_game: { emoji: "📝", label: "Crossword", color: "from-teal-500 to-teal-600" },
+    word_search_game: { emoji: "🔍", label: "Word Search", color: "from-cyan-500 to-cyan-600" },
   };
 
   if (isLoading) return (

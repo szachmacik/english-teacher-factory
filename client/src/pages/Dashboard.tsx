@@ -59,6 +59,8 @@ export default function Dashboard() {
             { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", active: true },
             { icon: BookOpen, label: "All Products", path: "/products" },
             { icon: Gamepad2, label: "Games", path: "/games" },
+            { icon: Zap, label: "Bulk Factory", path: "/bulk" },
+            { icon: Layers, label: "Orders & Revenue", path: "/orders" },
             { icon: Settings, label: "Settings", path: "/settings" },
           ].map((item) => (
             <button
@@ -145,6 +147,33 @@ export default function Dashboard() {
             </p>
           </div>
 
+          {/* QUICK ACTIONS */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate("/bulk")}
+              className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-pink-500/10 border border-violet-500/30 hover:border-violet-500/60 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Bulk Factory</p>
+                <p className="text-xs text-muted-foreground">Process 20 sources at once</p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate("/orders")}
+              className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 hover:border-green-500/60 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                <span className="text-white text-lg font-bold">$</span>
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Orders &amp; Revenue</p>
+                <p className="text-xs text-muted-foreground">Stripe payments &amp; history</p>
+              </div>
+            </button>
+          </div>
           {/* STATS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[

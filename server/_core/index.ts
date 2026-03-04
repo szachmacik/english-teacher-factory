@@ -31,6 +31,50 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // ─── Stripe Webhook (MUST be before express.json) ──────────────────────────
+  app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!sig || !webhookSecret) { res.status(400).send("Missing signature"); return; }
+    let event: any;
+    try {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" as any });
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err: any) {
+      console.error("[Webhook] Signature verification failed:", err.message);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
+    if (event.id.startsWith("evt_test_")) {
+      console.log("[Webhook] Test event detected");
+      res.json({ verified: true });
+      return;
+    }
+    try {
+      const { getDb } = await import("../db");
+      const { orders } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (db) {
+        if (event.type === "checkout.session.completed") {
+          const session = event.data.object;
+          await db.update(orders)
+            .set({ status: "paid", stripeCustomerId: session.customer, stripePaymentIntentId: session.payment_intent })
+            .where(eq(orders.stripeSessionId, session.id));
+          console.log(`[Webhook] Payment completed: ${session.id}`);
+        } else if (event.type === "payment_intent.payment_failed") {
+          const pi = event.data.object;
+          await db.update(orders).set({ status: "failed" }).where(eq(orders.stripePaymentIntentId, pi.id));
+        }
+      }
+    } catch (err) {
+      console.error("[Webhook] Processing error:", err);
+    }
+    res.json({ received: true });
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

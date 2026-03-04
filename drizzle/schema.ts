@@ -282,3 +282,55 @@ export const bundles = mysqlTable("bundles", {
 });
 export type Bundle = typeof bundles.$inferSelect;
 export type InsertBundle = typeof bundles.$inferInsert;
+
+/**
+ * Orders — Stripe payment records
+ */
+export const orders = mysqlTable("orders", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  projectId: int("projectId"),
+  bundleId: int("bundleId"),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 100 }),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 100 }),
+  stripeSessionId: varchar("stripeSessionId", { length: 200 }),
+  amount: int("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("usd").notNull(),
+  status: mysqlEnum("status", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
+  productTitle: text("productTitle"),
+  customerEmail: varchar("customerEmail", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = typeof orders.$inferInsert;
+
+/**
+ * Bulk Jobs — batch processing of multiple sources at once
+ */
+export const bulkJobs = mysqlTable("bulk_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: text("title"),
+  // Shared context for all items in the batch
+  cefrLevel: varchar("cefrLevel", { length: 5 }),
+  targetAge: varchar("targetAge", { length: 30 }),
+  schoolType: varchar("schoolType", { length: 30 }),
+  lessonGoal: varchar("lessonGoal", { length: 50 }),
+  teachingStyle: varchar("teachingStyle", { length: 30 }),
+  selectedProducts: json("selectedProducts").$type<string[]>(),
+  selectedGames: json("selectedGames").$type<string[]>(),
+  // Items to process
+  items: json("items").$type<Array<{ sourceType: string; value: string; title?: string }>>().notNull(),
+  // Results
+  projectIds: json("projectIds").$type<number[]>().default([]),
+  totalItems: int("totalItems").notNull(),
+  completedItems: int("completedItems").default(0),
+  failedItems: int("failedItems").default(0),
+  status: mysqlEnum("status", ["pending", "running", "completed", "error"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type BulkJob = typeof bulkJobs.$inferSelect;
+export type InsertBulkJob = typeof bulkJobs.$inferInsert;

@@ -3,6 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { factoryRouter } from "./routers/factory";
+import { stripeRouter } from "./routers/stripe";
+import { bulkRouter } from "./routers/bulk";
 
 export const appRouter = router({
   system: systemRouter,
@@ -15,6 +17,8 @@ export const appRouter = router({
     }),
   }),
   factory: factoryRouter,
+  stripe: stripeRouter,
+  bulk: bulkRouter,
 });
 
 export type AppRouter = typeof appRouter;
