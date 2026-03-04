@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,7 +44,17 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
+  --primary: oklch(0.52 0.22 262);
+  --primary-foreground: oklch(0.98 0 0);
+  --sidebar: oklch(0.12 0.03 265);
+  --sidebar-foreground: oklch(0.92 0.01 240);
+  --sidebar-primary: oklch(0.58 0.22 262);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.22 0.04 265);
+  --sidebar-accent-foreground: oklch(0.92 0.01 240);
+  --sidebar-border: oklch(0.25 0.03 265);
+  --sidebar-ring: oklch(0.55 0.22 262);
+  --color-blue-700: oklch(0.52 0.22 262);
   --primary-foreground: var(--color-blue-50);
   --sidebar-primary: var(--color-blue-600);
   --sidebar-primary-foreground: var(--color-blue-50);
@@ -118,7 +129,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -131,6 +142,65 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
+}
+
+/* Factory animations */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gradient-hero {
+  background: linear-gradient(135deg, oklch(0.12 0.04 265), oklch(0.18 0.06 280), oklch(0.14 0.05 240));
+  background-size: 300% 300%;
+  animation: gradient-shift 8s ease infinite;
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 oklch(0.55 0.22 262 / 0.4); }
+  70% { box-shadow: 0 0 0 10px oklch(0.55 0.22 262 / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(0.55 0.22 262 / 0); }
+}
+.pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+.product-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.product-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px oklch(0.55 0.22 262 / 0.15); }
+.game-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.game-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px oklch(0.65 0.2 200 / 0.2); }
+.flashcard-container { perspective: 1000px; }
+.flashcard-inner { transition: transform 0.6s; transform-style: preserve-3d; position: relative; }
+.flashcard-inner.flipped { transform: rotateY(180deg); }
+.flashcard-front, .flashcard-back { backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.flashcard-back { transform: rotateY(180deg); }
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 3s linear infinite; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(0.7 0.01 260); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.55 0.22 262); }
+
+/* Factory-specific styles */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-slide-up { animation: slide-up 0.4s ease-out; }
+.shimmer {
+  background: linear-gradient(90deg, oklch(0.92 0.01 260) 25%, oklch(0.97 0.005 260) 50%, oklch(0.92 0.01 260) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.font-display { font-family: 'Sora', sans-serif; }
+.hero-gradient {
+  background: linear-gradient(135deg, oklch(0.14 0.06 270) 0%, oklch(0.18 0.1 290) 50%, oklch(0.16 0.07 310) 100%);
+}
+.factory-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, oklch(0.52 0.22 280 / 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, oklch(0.62 0.18 300 / 0.05) 0%, transparent 50%),
+    oklch(0.98 0.005 260);
 }
 
 @layer components {
