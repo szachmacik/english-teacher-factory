@@ -10,7 +10,7 @@ import {
   ArrowLeft, Youtube, BookOpen, Gamepad2, Download, ExternalLink,
   CheckCircle2, Loader2, AlertCircle, Clock, FileText, Headphones,
   PenTool, Users, Sparkles, Copy, Share2, Trophy, Zap, RefreshCw,
-  Eye, Edit3, Play
+  Eye, Edit3, Play, ShoppingBag
 } from "lucide-react";
 import ProductPreviewModal from "@/components/ProductPreviewModal";
 
@@ -188,6 +188,15 @@ export default function ProjectDetail() {
                 Export All PDFs
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(`/marketplace/${projectId}`)}
+              className="gap-1.5 border-purple-200 text-purple-700 hover:bg-purple-50"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Marketplace Kit
+            </Button>
           </div>
         </div>
       </div>

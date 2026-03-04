@@ -150,3 +150,9 @@
 - [ ] Shareable product preview link (publiczny podgląd)
 - [ ] Marketplace card (gotowa karta produktu do Etsy/TPT/Gumroad)
 - [ ] Bundle creator (połącz kilka projektów w jeden pakiet)
+
+## 🚀 Sprint 3 (NOWE)
+- [ ] ZIP Bundle Download (archiver — pobierz wszystkie produkty projektu)
+- [ ] Nagrywanie głosowe w przeglądarce (Web Audio API → Whisper transcription)
+- [ ] Stripe Marketplace Card (strona sprzedażowa z ceną i podglądem produktów)
+- [ ] GitHub export z pełną dokumentacją wiedzy dla innych projektów Manus

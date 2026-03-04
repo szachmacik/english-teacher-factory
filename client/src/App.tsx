@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Marketplace from "./pages/Marketplace";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
 import GamePlayer from "./pages/GamePlayer";
@@ -23,7 +24,8 @@ function Router() {
       <Route path="/games" component={GamesLibrary} />
       <Route path="/settings" component={Settings} />
       <Route path="/create" component={CreateProject} />
-      <Route path="/404" component={NotFound} />
+      <Route path={"/marketplace/:id"} component={Marketplace} />
+      <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );

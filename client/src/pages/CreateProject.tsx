@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import VoiceRecorder from "@/components/VoiceRecorder";
 
 // ─── Source Types ─────────────────────────────────────────────────────────────
 const SOURCE_TYPES = [
@@ -93,9 +94,9 @@ const SOURCE_TYPES = [
     label: "Voice Note",
     color: "from-pink-500 to-pink-600",
     bg: "bg-pink-50 border-pink-200",
-    description: "Record or upload a voice note with lesson ideas",
+    description: "Record directly in browser or upload a voice note",
     placeholder: "Upload voice recording",
-    inputType: "file",
+    inputType: "voice",
   },
   {
     id: "song",
@@ -412,6 +413,42 @@ export default function CreateProject() {
                 </div>
               )}
 
+              {/* Voice Note — recorder + file upload */}
+              {source.inputType === "voice" && (
+                <div className="space-y-3">
+                  <VoiceRecorder
+                    onRecordingComplete={(url) => {
+                      setUploadedUrl(url);
+                      setUploadedFile({ name: `voice-note-${Date.now()}.webm` } as File);
+                    }}
+                    maxDurationSeconds={300}
+                  />
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or upload a file</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".mp3,.wav,.m4a,.ogg,.webm"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                    />
+                    {uploadedFile && uploadedFile.name.startsWith("voice-note") ? null : (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full p-4 border-2 border-dashed border-white/70 rounded-xl bg-white/40 hover:bg-white/60 transition-colors text-center"
+                      >
+                        <Upload className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
+                        <div className="text-sm font-medium">Upload audio file</div>
+                        <div className="text-xs text-muted-foreground">MP3, WAV, M4A, OGG, WebM</div>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Multi-source */}
               {source.inputType === "multi" && (
                 <div>
