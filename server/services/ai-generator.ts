@@ -1,872 +1,271 @@
+/**
+ * AI Content Generator — Multi-Source Edition
+ * All generators accept GeneratorCtx for unified interface
+ */
 import { invokeLLM } from "../_core/llm";
 
-export interface VideoAnalysis {
-  title: string;
-  mainTopics: string[];
-  cefrLevel: string;
-  keyVocabulary: VocabItem[];
-  grammarPoints: string[];
-  summary: string;
-  themes: string[];
+export interface GeneratorCtx {
+  text: string;
+  analysis: any;
+  project: any;
+  contextPrompt: string;
 }
 
-export interface VocabItem {
-  word: string;
-  partOfSpeech: string;
-  definition: string;
-  exampleSentence: string;
-  polishTranslation: string;
-  cefrLevel: string;
-}
-
-export interface WorksheetContent {
-  title: string;
-  beforeWatching: { type: string; instruction: string; items: any[] }[];
-  whileWatching: { type: string; instruction: string; items: any[] }[];
-  afterWatching: { type: string; instruction: string; items: any[] }[];
-}
-
-export interface GrammarGuideContent {
-  title: string;
-  grammarPoints: {
-    name: string;
-    explanation: string;
-    examples: string[];
-    exercises: { instruction: string; items: any[] }[];
-  }[];
-}
-
-export interface LessonPlanContent {
-  title: string;
-  level: string;
-  duration: string;
-  objectives: string[];
-  materials: string[];
-  stages: {
-    name: string;
-    duration: string;
-    activity: string;
-    teacherNotes: string;
-  }[];
-  homework: string;
-  differentiation: { stronger: string; weaker: string };
-}
-
-export interface QuizConfig {
-  title: string;
-  questions: {
-    id: number;
-    question: string;
-    options: string[];
-    correct: number;
-    explanation: string;
-  }[];
-}
-
-export interface MemoryGameConfig {
-  title: string;
-  pairs: { id: number; front: string; back: string }[];
-}
-
-export interface MatchingGameConfig {
-  title: string;
-  pairs: { id: number; left: string; right: string }[];
-}
-
-export interface FillBlanksConfig {
-  title: string;
-  sentences: {
-    id: number;
-    text: string; // use ___ for blank
-    answer: string;
-    options: string[];
-  }[];
-}
-
-export interface SpellingBeeConfig {
-  title: string;
-  words: { id: number; word: string; hint: string; difficulty: string }[];
-}
-
-export interface SentenceScrambleConfig {
-  title: string;
-  sentences: { id: number; scrambled: string[]; correct: string; hint: string }[];
-}
-
-/**
- * Analyze video transcript and extract educational content
- */
-export async function analyzeTranscript(
-  transcript: string,
-  videoTitle: string
-): Promise<VideoAnalysis> {
+async function llmJson(system: string, user: string): Promise<Record<string, unknown>> {
   const response = await invokeLLM({
     messages: [
-      {
-        role: "system",
-        content: `You are an expert EFL/ESL curriculum designer. Analyze the given YouTube video transcript and extract educational content for English teachers. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Analyze this transcript from "${videoTitle}" and return JSON with this exact structure:
-{
-  "title": "descriptive lesson title",
-  "mainTopics": ["topic1", "topic2", "topic3"],
-  "cefrLevel": "B1",
-  "keyVocabulary": [
-    {
-      "word": "example",
-      "partOfSpeech": "noun",
-      "definition": "clear definition",
-      "exampleSentence": "sentence from or inspired by the video",
-      "polishTranslation": "przykład",
-      "cefrLevel": "B1"
-    }
-  ],
-  "grammarPoints": ["Present Perfect", "Passive Voice"],
-  "summary": "2-3 sentence summary of the video content",
-  "themes": ["technology", "environment"]
-}
-
-Include 15-20 key vocabulary items. Focus on words that are useful for English learners.
-
-TRANSCRIPT:
-${transcript.substring(0, 4000)}`,
-      },
+      { role: "system", content: system + " Always respond with valid JSON only." },
+      { role: "user", content: user },
     ],
-    response_format: { type: "json_object" },
   });
-
-  return JSON.parse((response.choices[0].message.content as string)) as VideoAnalysis;
+  const raw = (response.choices[0]?.message?.content as string) ?? "{}";
+  try {
+    const m = raw.match(/```json\n?([\s\S]*?)\n?```/) || raw.match(/(\{[\s\S]*\})/);
+    return JSON.parse(m ? m[1] : raw);
+  } catch { return {}; }
 }
 
-/**
- * Generate comprehensive worksheet
- */
-export async function generateWorksheet(
-  transcript: string,
-  analysis: VideoAnalysis
-): Promise<WorksheetContent> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an expert EFL worksheet designer. Create engaging, pedagogically sound worksheets. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create a comprehensive worksheet for level ${analysis.cefrLevel} students based on this video about: ${analysis.summary}
-
-Return JSON:
-{
-  "title": "Worksheet title",
-  "beforeWatching": [
-    {
-      "type": "vocabulary_preview",
-      "instruction": "Match the words to their definitions",
-      "items": [{"word": "...", "definition": "..."}]
-    },
-    {
-      "type": "prediction",
-      "instruction": "What do you think the video is about? Write 3 predictions.",
-      "items": []
-    }
-  ],
-  "whileWatching": [
-    {
-      "type": "true_false",
-      "instruction": "Are these statements True (T) or False (F)?",
-      "items": [{"statement": "...", "answer": "T"}]
-    },
-    {
-      "type": "gap_fill",
-      "instruction": "Fill in the gaps while watching",
-      "items": [{"sentence": "The speaker says that ___ is important.", "answer": "..."}]
-    }
-  ],
-  "afterWatching": [
-    {
-      "type": "comprehension_questions",
-      "instruction": "Answer these questions in full sentences.",
-      "items": [{"question": "...", "model_answer": "..."}]
-    },
-    {
-      "type": "discussion",
-      "instruction": "Discuss with a partner:",
-      "items": [{"question": "..."}]
-    },
-    {
-      "type": "writing_task",
-      "instruction": "Write a short paragraph (100-150 words):",
-      "items": [{"prompt": "..."}]
-    }
-  ]
+export async function generateWorksheet(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an expert EFL worksheet designer.",
+    `Create a comprehensive English worksheet for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\nContent: ${text.slice(0,1500)}\n${contextPrompt}\nReturn JSON: {"title":"...","level":"${level}","beforeReading":[{"type":"discussion","instruction":"...","items":["q1"]}],"whileReading":[{"type":"comprehension","instruction":"...","items":[{"question":"...","answer":"..."}]}],"afterReading":[{"type":"writing","instruction":"...","items":["task1"]}],"vocabulary":[{"word":"...","definition":"..."}],"extension":"..."}`
+  );
 }
 
-Topics: ${analysis.mainTopics.join(", ")}
-Key vocabulary: ${analysis.keyVocabulary.slice(0, 10).map(v => v.word).join(", ")}
-
-TRANSCRIPT EXCERPT:
-${transcript.substring(0, 3000)}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string)) as WorksheetContent;
-}
-
-/**
- * Generate grammar guide
- */
-export async function generateGrammarGuide(
-  transcript: string,
-  analysis: VideoAnalysis
-): Promise<GrammarGuideContent> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an expert EFL grammar teacher. Create clear, example-rich grammar guides. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create a grammar guide for level ${analysis.cefrLevel} based on grammar points found in this video.
-
-Grammar points to cover: ${analysis.grammarPoints.join(", ")}
-
-Return JSON:
-{
-  "title": "Grammar Guide: [topic]",
-  "grammarPoints": [
-    {
-      "name": "Present Perfect",
-      "explanation": "We use the Present Perfect to...",
-      "examples": ["I have seen this video.", "She has never been to London."],
-      "exercises": [
-        {
-          "instruction": "Complete the sentences with the correct form",
-          "items": [{"sentence": "I ___ (never/see) such a beautiful place.", "answer": "have never seen"}]
-        }
-      ]
-    }
-  ]
-}
-
-TRANSCRIPT EXCERPT:
-${transcript.substring(0, 2000)}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string)) as GrammarGuideContent;
-}
-
-/**
- * Generate full lesson plan
- */
-export async function generateLessonPlan(
-  analysis: VideoAnalysis,
-  videoTitle: string
-): Promise<LessonPlanContent> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an experienced EFL teacher trainer. Create detailed, practical lesson plans. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create a 60-minute lesson plan for level ${analysis.cefrLevel} using the YouTube video "${videoTitle}".
-
-Video summary: ${analysis.summary}
-Topics: ${analysis.mainTopics.join(", ")}
-Grammar points: ${analysis.grammarPoints.join(", ")}
-
-Return JSON:
-{
-  "title": "Lesson title",
-  "level": "${analysis.cefrLevel}",
-  "duration": "60 minutes",
-  "objectives": ["Students will be able to...", "Students will practise..."],
-  "materials": ["YouTube video", "Worksheet", "Whiteboard"],
-  "stages": [
-    {
-      "name": "Warmer",
-      "duration": "5 min",
-      "activity": "Detailed description of what teacher and students do",
-      "teacherNotes": "Tips for the teacher"
-    },
-    {
-      "name": "Pre-teaching vocabulary",
-      "duration": "10 min",
-      "activity": "...",
-      "teacherNotes": "..."
-    },
-    {
-      "name": "First viewing",
-      "duration": "10 min",
-      "activity": "...",
-      "teacherNotes": "..."
-    },
-    {
-      "name": "Second viewing",
-      "duration": "10 min",
-      "activity": "...",
-      "teacherNotes": "..."
-    },
-    {
-      "name": "Language focus",
-      "duration": "10 min",
-      "activity": "...",
-      "teacherNotes": "..."
-    },
-    {
-      "name": "Speaking/Writing task",
-      "duration": "10 min",
-      "activity": "...",
-      "teacherNotes": "..."
-    },
-    {
-      "name": "Feedback and wrap-up",
-      "duration": "5 min",
-      "activity": "...",
-      "teacherNotes": "..."
-    }
-  ],
-  "homework": "Detailed homework task",
-  "differentiation": {
-    "stronger": "Extension activities for stronger students",
-    "weaker": "Support strategies for weaker students"
-  }
-}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string)) as LessonPlanContent;
-}
-
-/**
- * Generate mini textbook chapter
- */
-export async function generateMiniTextbook(
-  transcript: string,
-  analysis: VideoAnalysis
-): Promise<Record<string, unknown>> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL textbook author. Create engaging, structured textbook chapters. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create a mini textbook chapter for level ${analysis.cefrLevel} based on this video content.
-
-Summary: ${analysis.summary}
-Topics: ${analysis.mainTopics.join(", ")}
-
-Return JSON:
-{
-  "title": "Chapter title",
-  "unitTitle": "Unit: [theme]",
-  "introduction": "Engaging intro paragraph that hooks students",
-  "readingPassage": {
-    "title": "Reading passage title",
-    "text": "A 200-250 word reading passage inspired by the video content, written at ${analysis.cefrLevel} level",
-    "glossary": [{"word": "...", "definition": "..."}]
-  },
-  "comprehensionQuestions": [
-    {"type": "literal", "question": "...", "answer": "..."},
-    {"type": "inferential", "question": "...", "answer": "..."}
-  ],
-  "vocabularySection": {
-    "title": "Key Vocabulary",
-    "words": [{"word": "...", "definition": "...", "example": "...", "polish": "..."}]
-  },
-  "grammarBox": {
-    "title": "Grammar Focus",
-    "rule": "...",
-    "examples": ["..."],
-    "practice": [{"sentence": "...", "answer": "..."}]
-  },
-  "speakingActivity": {
-    "title": "Let's Talk!",
-    "instruction": "...",
-    "questions": ["..."]
-  },
-  "writingTask": {
-    "title": "Writing Task",
-    "instruction": "...",
-    "wordCount": "150-200 words",
-    "tips": ["..."]
-  }
-}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string));
-}
-
-/**
- * Generate writing exercises
- */
-export async function generateWritingExercises(
-  analysis: VideoAnalysis
-): Promise<Record<string, unknown>> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL writing skills expert. Create varied, scaffolded writing exercises. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create writing exercises for level ${analysis.cefrLevel} based on the topic: ${analysis.summary}
-
-Return JSON:
-{
-  "title": "Writing Skills: [topic]",
-  "exercises": [
-    {
-      "type": "guided_paragraph",
-      "title": "Guided Paragraph Writing",
-      "instruction": "...",
-      "scaffold": "Topic sentence: ___\\nSupporting idea 1: ___\\nSupporting idea 2: ___\\nConclusion: ___",
-      "wordCount": "80-100 words",
-      "model": "Model paragraph example..."
-    },
-    {
-      "type": "opinion_essay",
-      "title": "Opinion Essay",
-      "instruction": "...",
-      "prompt": "...",
-      "wordCount": "150-200 words",
-      "usefulLanguage": ["In my opinion...", "I believe that...", "On the other hand..."]
-    },
-    {
-      "type": "email",
-      "title": "Email Writing",
-      "instruction": "Write an email to a friend about what you learned from the video",
-      "prompt": "...",
-      "wordCount": "100-120 words",
-      "format": ["Greeting", "Opening line", "Main content", "Closing"]
-    },
-    {
-      "type": "summary",
-      "title": "Summary Writing",
-      "instruction": "Summarise the main points of the video in your own words",
-      "wordCount": "100-150 words",
-      "tips": ["Use your own words", "Include the main ideas only", "Use linking words"]
-    }
-  ]
-}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string));
-}
-
-/**
- * Generate listening comprehension tasks
- */
-export async function generateListeningComprehension(
-  transcript: string,
-  analysis: VideoAnalysis
-): Promise<Record<string, unknown>> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL listening skills expert. Create authentic listening tasks. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create listening comprehension tasks for level ${analysis.cefrLevel}.
-
-Video summary: ${analysis.summary}
-Key vocabulary: ${analysis.keyVocabulary.slice(0, 8).map(v => v.word).join(", ")}
-
-Return JSON:
-{
-  "title": "Listening Comprehension: [topic]",
-  "preListening": {
-    "title": "Before You Listen",
-    "tasks": [
-      {"type": "prediction", "instruction": "Look at the title and predict: what will the video be about?", "items": []},
-      {"type": "vocabulary", "instruction": "Check you know these words before listening", "items": [{"word": "...", "definition": "..."}]}
-    ]
-  },
-  "firstListening": {
-    "title": "First Listening — General Understanding",
-    "instruction": "Watch the video once and answer these general questions",
-    "tasks": [
-      {"type": "gist", "question": "What is the main topic of the video?", "answer": "..."},
-      {"type": "multiple_choice", "question": "The speaker's main message is...", "options": ["A...", "B...", "C...", "D..."], "answer": "A"}
-    ]
-  },
-  "secondListening": {
-    "title": "Second Listening — Detailed Understanding",
-    "instruction": "Watch again and complete these tasks",
-    "tasks": [
-      {"type": "note_taking", "instruction": "Complete the notes", "items": [{"label": "Main point 1:", "answer": "..."}]},
-      {"type": "true_false_justify", "instruction": "True, False or Not Given? Justify your answer.", "items": [{"statement": "...", "answer": "True", "justification": "..."}]}
-    ]
-  },
-  "postListening": {
-    "title": "After Listening",
-    "tasks": [
-      {"type": "discussion", "questions": ["...", "..."]},
-      {"type": "reflection", "instruction": "What was the most interesting thing you learned?"}
-    ]
-  }
-}
-
-TRANSCRIPT:
-${transcript.substring(0, 2000)}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string));
-}
-
-/**
- * Generate discussion questions
- */
-export async function generateDiscussionQuestions(
-  analysis: VideoAnalysis
-): Promise<Record<string, unknown>> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL speaking skills expert. Create thought-provoking discussion questions. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create discussion questions for level ${analysis.cefrLevel} based on: ${analysis.summary}
-
-Return JSON:
-{
-  "title": "Discussion & Speaking Activities",
-  "warmUp": [{"question": "...", "tip": "Personal connection question"}],
-  "comprehension": [{"question": "...", "tip": "Check understanding"}],
-  "analysis": [{"question": "...", "tip": "Deeper thinking"}],
-  "opinion": [{"question": "...", "tip": "Express and justify opinions"}],
-  "debate": {
-    "motion": "This house believes that...",
-    "forArguments": ["..."],
-    "againstArguments": ["..."]
-  },
-  "rolePlay": {
-    "scenario": "...",
-    "roles": [{"role": "...", "instructions": "..."}]
-  },
-  "usefulLanguage": {
-    "agreeing": ["I completely agree...", "That's a good point..."],
-    "disagreeing": ["I'm not sure about that...", "I see it differently..."],
-    "giving_opinions": ["In my opinion...", "From my perspective..."]
-  }
-}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string));
-}
-
-/**
- * Generate homework assignment
- */
-export async function generateHomework(
-  analysis: VideoAnalysis,
-  videoTitle: string
-): Promise<Record<string, unknown>> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL teacher. Create meaningful, varied homework assignments. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create homework assignments for level ${analysis.cefrLevel} students who watched "${videoTitle}".
-
-Return JSON:
-{
-  "title": "Homework Assignment",
-  "dueDate": "Next lesson",
-  "tasks": [
-    {
-      "number": 1,
-      "type": "vocabulary",
-      "title": "Vocabulary Practice",
-      "instruction": "...",
-      "details": "...",
-      "timeEstimate": "15 minutes"
-    },
-    {
-      "number": 2,
-      "type": "writing",
-      "title": "Writing Task",
-      "instruction": "...",
-      "wordCount": "100-150 words",
-      "timeEstimate": "20 minutes"
-    },
-    {
-      "number": 3,
-      "type": "research",
-      "title": "Research Task",
-      "instruction": "...",
-      "timeEstimate": "15 minutes"
-    }
-  ],
-  "bonusTask": {
-    "title": "Bonus Challenge",
-    "instruction": "...",
-    "reward": "Extra points!"
-  }
-}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string));
-}
-
-/**
- * Generate teacher notes
- */
-export async function generateTeacherNotes(
-  analysis: VideoAnalysis,
-  videoTitle: string
-): Promise<Record<string, unknown>> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are a senior EFL teacher trainer. Create comprehensive teacher notes. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create teacher notes for "${videoTitle}" at level ${analysis.cefrLevel}.
-
-Return JSON:
-{
-  "title": "Teacher Notes",
-  "backgroundInfo": "Background information about the topic for the teacher",
-  "culturalNotes": ["Cultural context point 1", "Cultural context point 2"],
-  "languageFocus": {
-    "vocabulary": [{"word": "...", "notes": "Teaching tips for this word"}],
-    "grammar": [{"point": "...", "commonErrors": ["..."], "tips": "..."}]
-  },
-  "classroomManagement": ["Tip 1", "Tip 2"],
-  "differentiation": {
-    "earlyFinishers": ["Activity 1", "Activity 2"],
-    "supportStrategies": ["Strategy 1", "Strategy 2"],
-    "extensionActivities": ["Extension 1", "Extension 2"]
-  },
-  "assessmentIdeas": ["Formative assessment idea 1", "Summative assessment idea"],
-  "crossCurricularLinks": ["Subject 1: connection", "Subject 2: connection"],
-  "onlineResources": ["Suggested resource 1", "Suggested resource 2"]
-}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string));
-}
-
-// ============ GAME GENERATORS ============
-
-/**
- * Generate quiz game
- */
-export async function generateQuiz(
-  transcript: string,
-  analysis: VideoAnalysis
-): Promise<QuizConfig> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL quiz designer. Create engaging multiple-choice quizzes. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create a 10-question multiple choice quiz for level ${analysis.cefrLevel} based on this video.
-
-Return JSON:
-{
-  "title": "Video Quiz: [topic]",
-  "questions": [
-    {
-      "id": 1,
-      "question": "Question text?",
-      "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
-      "correct": 0,
-      "explanation": "Why this answer is correct"
-    }
-  ]
-}
-
-Include mix of: comprehension questions, vocabulary questions, grammar questions.
-correct field is 0-indexed (0=A, 1=B, 2=C, 3=D).
-
-TRANSCRIPT:
-${transcript.substring(0, 2000)}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string)) as QuizConfig;
-}
-
-/**
- * Generate memory game pairs
- */
-export async function generateMemoryGame(
-  analysis: VideoAnalysis
-): Promise<MemoryGameConfig> {
-  const pairs = analysis.keyVocabulary.slice(0, 12).map((v, i) => ({
-    id: i + 1,
-    front: v.word,
-    back: v.definition,
-  }));
-
+export async function generateVocabularyList(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const vocab = (analysis.vocabulary || []).slice(0, 20);
   return {
-    title: `Vocabulary Memory Game`,
-    pairs,
+    title: `Vocabulary List — ${(analysis.topics||["English Lesson"])[0]}`,
+    level,
+    words: vocab.map((v: any, i: number) => ({ id: i+1, word: v.word, partOfSpeech: v.partOfSpeech, definition: v.definition, exampleSentence: v.exampleSentence, polishTranslation: v.polishTranslation, cefrLevel: v.cefrLevel })),
+    exercises: [{ type: "match", instruction: "Match the word with its definition" }, { type: "gap_fill", instruction: "Fill in the gaps" }, { type: "sentence", instruction: "Write your own sentence" }],
   };
 }
 
-/**
- * Generate matching game
- */
-export async function generateMatchingGame(
-  analysis: VideoAnalysis
-): Promise<MatchingGameConfig> {
-  const pairs = analysis.keyVocabulary.slice(0, 10).map((v, i) => ({
-    id: i + 1,
-    left: v.word,
-    right: v.definition,
-  }));
-
+export async function generateFlashcards(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const vocab = (analysis.vocabulary || []).slice(0, 20);
   return {
-    title: `Word Matching Challenge`,
-    pairs,
+    title: `Flashcard Set — ${(analysis.topics||["English Lesson"])[0]}`,
+    level,
+    cards: vocab.map((v: any, i: number) => ({ id: i+1, front: v.word, back: `${v.definition}\n\nExample: ${v.exampleSentence}\n\nPolish: ${v.polishTranslation}`, partOfSpeech: v.partOfSpeech, cefrLevel: v.cefrLevel })),
+    studyModes: ["flashcard", "quiz", "write"],
   };
 }
 
-/**
- * Generate fill-in-the-blanks game
- */
-export async function generateFillBlanks(
-  transcript: string,
-  analysis: VideoAnalysis
-): Promise<FillBlanksConfig> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL game designer. Create fill-in-the-blank exercises. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create 8 fill-in-the-blank sentences for level ${analysis.cefrLevel} based on the video content.
-
-Return JSON:
-{
-  "title": "Fill in the Blanks",
-  "sentences": [
-    {
-      "id": 1,
-      "text": "The speaker explains that ___ is very important for our daily lives.",
-      "answer": "technology",
-      "options": ["technology", "music", "sport", "cooking"]
-    }
-  ]
+export async function generateGrammarGuide(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const gp = (analysis.grammarPoints || ["Present Simple"]).join(", ");
+  return llmJson(
+    "You are an expert EFL grammar teacher.",
+    `Create a grammar guide for level ${level}.\nGrammar: ${gp}\nContent: ${text.slice(0,1000)}\n${contextPrompt}\nReturn JSON: {"title":"...","level":"${level}","grammarPoints":[{"name":"...","explanation":"...","form":"...","examples":["..."],"commonMistakes":["..."],"exercises":[{"instruction":"...","items":[{"sentence":"...","answer":"..."}]}]}],"quickReference":"..."}`
+  );
 }
 
-Use key vocabulary: ${analysis.keyVocabulary.slice(0, 8).map(v => v.word).join(", ")}
-
-TRANSCRIPT:
-${transcript.substring(0, 1500)}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  return JSON.parse((response.choices[0].message.content as string)) as FillBlanksConfig;
+export async function generateWritingExercise(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL writing skills expert.",
+    `Create writing exercises for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"...","level":"${level}","exercises":[{"type":"guided_writing","title":"...","instruction":"...","wordCount":"100-150 words","scaffold":["Point 1"],"modelAnswer":"...","assessmentCriteria":["Content","Grammar"]}],"usefulLanguage":["phrase1"],"writingTips":["tip1"]}`
+  );
 }
 
-/**
- * Generate spelling bee game
- */
-export async function generateSpellingBee(
-  analysis: VideoAnalysis
-): Promise<SpellingBeeConfig> {
-  const words = analysis.keyVocabulary.map((v, i) => ({
-    id: i + 1,
-    word: v.word,
-    hint: v.definition,
-    difficulty: v.cefrLevel || analysis.cefrLevel,
-  }));
+export async function generateListeningComprehension(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL listening skills expert.",
+    `Create listening comprehension tasks for level ${level}.\nContent: ${text.slice(0,2000)}\n${contextPrompt}\nReturn JSON: {"title":"...","level":"${level}","preListening":[{"type":"prediction","instruction":"...","items":["q1"]}],"whileListening":[{"type":"gist","instruction":"...","items":[{"question":"...","answer":"..."}]},{"type":"detail","instruction":"...","items":[{"question":"...","answer":"..."}]}],"postListening":[{"type":"discussion","instruction":"...","items":["q1"]}]}`
+  );
+}
 
+export async function generateLessonPlan(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const duration = project.lessonDuration || 60;
+  return llmJson(
+    "You are an expert EFL lesson planner.",
+    `Create a ${duration}-minute lesson plan for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\nGrammar: ${(analysis.grammarPoints||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"...","level":"${level}","duration":"${duration} min","objectives":["Students will be able to..."],"materials":["Worksheet"],"stages":[{"name":"Warmer","duration":"5 min","activity":"...","teacherInstructions":"...","studentActivity":"...","interaction":"T-S"}],"homework":"...","differentiation":{"stronger":"...","weaker":"..."},"assessment":"..."}`
+  );
+}
+
+export async function generateMiniTextbook(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL textbook author.",
+    `Create a mini textbook unit for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\nContent: ${text.slice(0,2000)}\n${contextPrompt}\nReturn JSON: {"title":"...","level":"${level}","unitOverview":"...","sections":[{"title":"...","type":"reading","content":"...","exercises":[{"instruction":"...","items":[]}],"keyLanguage":["phrase1"]}],"unitReview":{"questions":["q1"],"selfAssessment":["I can..."]},"glossary":[{"word":"...","definition":"..."}]}`
+  );
+}
+
+export async function generateDiscussionQuestions(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL speaking skills expert.",
+    `Create discussion questions for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Discussion Questions","level":"${level}","warmUp":["q1","q2"],"mainDiscussion":[{"question":"...","followUp":["..."],"vocabulary":["word1"]}],"debate":{"motion":"This house believes that...","proArguments":["..."],"conArguments":["..."]},"rolePlay":{"scenario":"...","roles":["Role A: ...","Role B: ..."]},"usefulLanguage":{"agreeing":["I agree because..."],"disagreeing":["However..."],"adding":["Furthermore..."]}}`
+  );
+}
+
+export async function generateHomework(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL teacher. Create meaningful homework assignments.",
+    `Create homework for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Homework Assignment","level":"${level}","tasks":[{"type":"vocabulary","title":"...","instruction":"...","estimatedTime":"15 minutes","resources":["..."]}],"submissionGuidelines":"...","selfCheckQuestions":["Did I...?"]}`
+  );
+}
+
+export async function generateTeacherNotes(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an experienced EFL teacher trainer.",
+    `Create teacher notes for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\nContent: ${text.slice(0,1500)}\n${contextPrompt}\nReturn JSON: {"title":"Teacher Notes","level":"${level}","backgroundInfo":"...","anticipatedProblems":[{"problem":"...","solution":"..."}],"adaptations":{"online":"...","largeClass":"...","mixedAbility":"..."},"extensionActivities":["..."],"assessmentTips":["..."],"culturalNotes":"...","timingNotes":"...","answerKey":"..."}`
+  );
+}
+
+export async function generateSongWorksheet(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL teacher specializing in music-based learning.",
+    `Create a song worksheet for level ${level}.\nLyrics/content: ${text.slice(0,2000)}\n${contextPrompt}\nReturn JSON: {"title":"Song Worksheet","level":"${level}","preListening":[{"type":"prediction","instruction":"...","items":[]}],"lyricsExercises":[{"type":"gap_fill","instruction":"...","text":"lyrics with ___ blanks","answers":["word1"]}],"languageFocus":[{"feature":"idiom","examples":["..."],"explanation":"..."}],"discussionQuestions":["q1"],"creativeTask":"Write your own verse about..."}`
+  );
+}
+
+export async function generateCrossword(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const vocab = (analysis.vocabulary || []).slice(0, 15);
+  return llmJson(
+    "You are an EFL puzzle designer.",
+    `Create a crossword puzzle for level ${level} using: ${vocab.map((v:any)=>v.word).join(", ")}\nReturn JSON: {"title":"Crossword Puzzle","level":"${level}","clues":{"across":[{"number":1,"clue":"Definition or sentence with blank","answer":"WORD","row":0,"col":0}],"down":[{"number":2,"clue":"...","answer":"WORD","row":0,"col":0}]},"gridSize":15,"instructions":"Fill in the crossword"}`
+  );
+}
+
+export async function generateWordSearch(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "A2";
+  const vocab = (analysis.vocabulary || []).slice(0, 12);
   return {
-    title: `Spelling Bee Challenge`,
-    words,
+    title: "Word Search Puzzle",
+    level,
+    words: vocab.map((v: any) => v.word.toUpperCase()),
+    definitions: vocab.map((v: any) => ({ word: v.word, definition: v.definition })),
+    gridSize: 15,
+    instructions: "Find the hidden words. Words can go horizontally, vertically, or diagonally.",
   };
 }
 
-/**
- * Generate sentence scramble game
- */
-export async function generateSentenceScramble(
-  analysis: VideoAnalysis
-): Promise<SentenceScrambleConfig> {
-  const response = await invokeLLM({
-    messages: [
-      {
-        role: "system",
-        content: `You are an EFL game designer. Create sentence scramble exercises. Always respond with valid JSON only.`,
-      },
-      {
-        role: "user",
-        content: `Create 8 sentence scramble exercises for level ${analysis.cefrLevel}.
-
-Return JSON:
-{
-  "title": "Sentence Scramble",
-  "sentences": [
-    {
-      "id": 1,
-      "scrambled": ["important", "is", "very", "Learning", "English"],
-      "correct": "Learning English is very important",
-      "hint": "Think about subject + verb + complement"
-    }
-  ]
+export async function generateRolePlayCards(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL speaking skills expert.",
+    `Create role-play cards for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Role Play Cards","level":"${level}","scenarios":[{"id":1,"title":"...","situation":"...","roles":[{"name":"Role A","objective":"...","background":"...","usefulLanguage":["phrase1"]},{"name":"Role B","objective":"...","background":"...","usefulLanguage":["phrase1"]}],"targetLanguage":["Function: phrase"],"debrief":"..."}],"generalUsefulLanguage":{"starting":["..."],"agreeing":["..."],"closing":["..."]}}`
+  );
 }
 
-Use vocabulary: ${analysis.keyVocabulary.slice(0, 8).map(v => v.word).join(", ")}
-Topics: ${analysis.mainTopics.join(", ")}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
+export async function generatePronunciationGuide(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const vocab = (analysis.vocabulary || []).slice(0, 15);
+  return llmJson(
+    "You are an EFL pronunciation expert.",
+    `Create a pronunciation guide for level ${level}.\nWords: ${vocab.map((v:any)=>v.word).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Pronunciation Guide","level":"${level}","words":[{"word":"example","ipa":"/ɪɡˈzɑːmpəl/","syllables":"ex-am-ple","stress":"ex-AM-ple","soundsLike":"ig-ZAM-pul","commonMistake":"..."}],"phonemesFocus":[{"phoneme":"/θ/","description":"...","examples":["think"]}],"minimalPairs":[{"pair":["ship","sheep"],"practice":"..."}],"drills":[{"type":"repetition","instruction":"...","items":["word1"]}],"tips":["tip1"]}`
+  );
+}
 
-  return JSON.parse((response.choices[0].message.content as string)) as SentenceScrambleConfig;
+export async function generateDebateCards(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B2";
+  return llmJson(
+    "You are an EFL debate expert.",
+    `Create debate cards for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Debate Cards","level":"${level}","motions":[{"id":1,"motion":"This house believes that...","proArguments":[{"argument":"...","evidence":"...","rebuttal":"..."}],"conArguments":[{"argument":"...","evidence":"...","rebuttal":"..."}],"vocabulary":[{"word":"...","definition":"..."}]}],"debateStructure":{"opening":"2 min","rebuttal":"1 min","closing":"1 min"},"usefulLanguage":{"stating":["In my opinion..."],"countering":["However..."],"conceding":["While I agree that..."]}}`
+  );
+}
+
+export async function generateErrorCorrection(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const nativeLang = project.nativeLanguage || "Polish";
+  return llmJson(
+    "You are an EFL error analysis expert.",
+    `Create error correction exercises for ${nativeLang}-speaking level ${level} students.\nGrammar: ${(analysis.grammarPoints||[]).join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Error Correction Exercises","level":"${level}","nativeLanguage":"${nativeLang}","sections":[{"type":"spot_the_error","instruction":"Find and correct the mistake","items":[{"sentence":"Incorrect sentence","error":"what is wrong","correction":"Correct sentence","rule":"Grammar rule"}]},{"type":"rewrite","instruction":"Rewrite correctly","items":[{"incorrect":"...","correct":"..."}]}],"commonErrors":[{"error":"...","cause":"L1 interference","correction":"..."}]}`
+  );
+}
+
+export async function generateReadingPassage(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { text, analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  return llmJson(
+    "You are an EFL reading skills expert and graded reader author.",
+    `Create a graded reading passage for level ${level}.\nTopic: ${(analysis.topics||[]).join(", ")}\nSource: ${text.slice(0,1500)}\n${contextPrompt}\nReturn JSON: {"title":"Reading Passage","level":"${level}","passage":"Full 300-500 word passage graded to ${level}","glossary":[{"word":"...","definition":"..."}],"comprehensionQuestions":[{"type":"multiple_choice","question":"...","options":["A","B","C","D"],"answer":"A"},{"type":"true_false","statement":"...","answer":true,"justification":"..."},{"type":"open","question":"...","modelAnswer":"..."}],"vocabularyInContext":[{"word":"...","paragraph":1,"meaning":"..."}],"criticalThinking":["Higher-order question"]}`
+  );
+}
+
+export async function generateAssessmentRubric(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "B1";
+  const skills = project.focusSkills || ["speaking", "writing"];
+  return llmJson(
+    "You are an EFL assessment expert.",
+    `Create assessment rubrics for level ${level}.\nSkills: ${skills.join(", ")}\n${contextPrompt}\nReturn JSON: {"title":"Assessment Rubric","level":"${level}","rubrics":[{"skill":"speaking","criteria":[{"name":"Content","weight":"25%","levels":{"excellent":{"score":"4","descriptor":"..."},"good":{"score":"3","descriptor":"..."},"satisfactory":{"score":"2","descriptor":"..."},"needsWork":{"score":"1","descriptor":"..."}}}]}],"selfAssessmentChecklist":["I can..."],"peerAssessmentQuestions":["Did your partner...?"]}`
+  );
+}
+
+export async function generateParentNewsletter(ctx: GeneratorCtx): Promise<Record<string, unknown>> {
+  const { analysis, project, contextPrompt } = ctx;
+  const level = project.cefrLevel || analysis.difficulty || "A2";
+  const nativeLang = project.nativeLanguage || "Polish";
+  return llmJson(
+    `You are an EFL teacher writing to parents in ${nativeLang} and English.`,
+    `Create a parent newsletter about this English lesson.\nTopic: ${(analysis.topics||["English Lesson"]).join(", ")}\nLevel: ${level}\n${contextPrompt}\nReturn JSON: {"title":"Parent Newsletter","englishVersion":{"greeting":"Dear Parents,","thisWeek":"This week in English class...","whatWelearned":["Learning point 1"],"homeworkTips":["How to help at home"],"upcomingTopics":"Next week...","closing":"Thank you!"},"polishVersion":{"greeting":"Drodzy Rodzice,","thisWeek":"W tym tygodniu...","whatWelearned":["Punkt nauki 1"],"homeworkTips":["Jak pomóc w domu"],"upcomingTopics":"W przyszłym tygodniu...","closing":"Dziękujemy!"},"vocabularyToReview":[{"english":"...","polish":"..."}]}`
+  );
+}
+
+// ─── Game Generators ──────────────────────────────────────────────────────────
+
+export async function generateQuizGame(text: string, analysis: any): Promise<Record<string, unknown>> {
+  return llmJson(
+    "You are an EFL quiz designer.",
+    `Create a 10-question multiple choice quiz.\nContent: ${text.slice(0,2000)}\nLevel: ${analysis.difficulty||"B1"}\nReturn JSON: {"title":"Quiz","questions":[{"id":1,"question":"...?","options":["A","B","C","D"],"correct":0,"explanation":"..."}]}`
+  );
+}
+
+export async function generateMemoryGame(text: string, analysis: any): Promise<Record<string, unknown>> {
+  const vocab = (analysis.vocabulary || []).slice(0, 12);
+  return { title: "Memory Game", pairs: vocab.map((v: any, i: number) => ({ id: i+1, front: v.word, back: v.definition })) };
+}
+
+export async function generateMatchingGame(text: string, analysis: any): Promise<Record<string, unknown>> {
+  const vocab = (analysis.vocabulary || []).slice(0, 10);
+  return { title: "Matching Game", pairs: vocab.map((v: any, i: number) => ({ id: i+1, left: v.word, right: v.definition })) };
+}
+
+export async function generateFillBlanksGame(text: string, analysis: any): Promise<Record<string, unknown>> {
+  return llmJson(
+    "You are an EFL exercise designer.",
+    `Create 8 fill-in-the-blank sentences.\nContent: ${text.slice(0,1500)}\nLevel: ${analysis.difficulty||"B1"}\nReturn JSON: {"title":"Fill in the Blanks","sentences":[{"id":1,"text":"The ___ is very important.","answer":"language","options":["language","picture","music","sport"]}]}`
+  );
+}
+
+export async function generateSpellingBeeGame(text: string, analysis: any): Promise<Record<string, unknown>> {
+  const vocab = (analysis.vocabulary || []).slice(0, 15);
+  return { title: "Spelling Bee", words: vocab.map((v: any, i: number) => ({ id: i+1, word: v.word, hint: v.definition, difficulty: v.cefrLevel || "B1" })) };
+}
+
+export async function generateSentenceScrambleGame(text: string, analysis: any): Promise<Record<string, unknown>> {
+  return llmJson(
+    "You are an EFL grammar expert.",
+    `Create 8 sentence scramble exercises.\nContent: ${text.slice(0,1500)}\nLevel: ${analysis.difficulty||"B1"}\nReturn JSON: {"title":"Sentence Scramble","sentences":[{"id":1,"scrambled":["is","important","English","very"],"correct":"English is very important.","hint":"Think about word order"}]}`
+  );
 }

@@ -83,14 +83,14 @@ export default function ProjectDetail() {
 
   const exportAll = trpc.factory.canva.exportAll.useMutation({
     onSuccess: (result) => {
-      toast.success(`Exported ${result.exported} products to PDF`);
+      toast.success(`Exported ${result.total} products to PDF`);
       refetch();
     },
     onError: (err) => toast.error("Export failed", { description: err.message }),
   });
 
-  const generateSocialMedia = trpc.factory.canva.generateSocialMedia.useMutation({
-    onSuccess: (result) => {
+  const generateSocialMedia = trpc.factory.canva.generateSocialPost.useMutation({
+    onSuccess: (result: any) => {
       if (result.editUrl) {
         toast.success("Social media post created in Canva!", {
           description: (
@@ -103,11 +103,11 @@ export default function ProjectDetail() {
         toast.success("Social media post generated!");
       }
     },
-    onError: (err) => toast.error("Failed to generate", { description: err.message }),
+    onError: (err: any) => toast.error("Failed to generate", { description: err.message }),
   });
 
   const generateThumbnail = trpc.factory.canva.generateThumbnail.useMutation({
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       if (result.editUrl) {
         toast.success("YouTube thumbnail created in Canva!", {
           description: (
@@ -120,7 +120,7 @@ export default function ProjectDetail() {
         toast.success("Thumbnail generated!");
       }
     },
-    onError: (err) => toast.error("Failed to generate", { description: err.message }),
+    onError: (err: any) => toast.error("Failed to generate", { description: err.message }),
   });
 
   const copyGameLink = (token: string) => {
@@ -233,7 +233,7 @@ export default function ProjectDetail() {
                 {vocabulary.length > 0 && <Badge variant="outline">{vocabulary.length} vocabulary items</Badge>}
               </div>
               <a
-                href={project.youtubeUrl}
+                href={project.youtubeUrl ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm text-primary hover:underline"

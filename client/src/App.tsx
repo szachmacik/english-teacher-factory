@@ -11,7 +11,7 @@ import GamePlayer from "./pages/GamePlayer";
 import AllProducts from "./pages/AllProducts";
 import GamesLibrary from "./pages/GamesLibrary";
 import Settings from "./pages/Settings";
-
+import CreateProject from "./pages/CreateProject";
 function Router() {
   return (
     <Switch>
@@ -22,6 +22,7 @@ function Router() {
       <Route path="/products" component={AllProducts} />
       <Route path="/games" component={GamesLibrary} />
       <Route path="/settings" component={Settings} />
+      <Route path="/create" component={CreateProject} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

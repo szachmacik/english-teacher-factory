@@ -9,7 +9,8 @@ import { useState } from "react";
 import {
   Youtube, Zap, Plus, Clock, CheckCircle2, AlertCircle,
   Loader2, ArrowRight, Trash2, BookOpen, Gamepad2, LayoutDashboard,
-  LogOut, Settings, ChevronRight, Play, RefreshCw
+  LogOut, Settings, ChevronRight, Play, RefreshCw,
+  Globe, FileText, Mic, Image, Lightbulb, Music, Layers, Sparkles
 } from "lucide-react";
 import { useAuth as useCoreAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -26,9 +27,6 @@ const STATUS_CONFIG = {
 export default function Dashboard() {
   const { user, logout } = useAuth({ redirectOnUnauthenticated: true });
   const [, navigate] = useLocation();
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-
   const { data: projects, refetch, isLoading } = trpc.factory.projects.list.useQuery(undefined, {
     refetchInterval: 5000,
   });
@@ -36,30 +34,9 @@ export default function Dashboard() {
     refetchInterval: 15000,
   });
 
-  const createProject = trpc.factory.projects.create.useMutation({
-    onSuccess: (data) => {
-      toast.success("🚀 Pipeline started!", { description: "Generating your product ecosystem..." });
-      setYoutubeUrl("");
-      setIsCreating(false);
-      refetch();
-      navigate(`/project/${data.projectId}`);
-    },
-    onError: (err) => {
-      toast.error("Failed to start", { description: err.message });
-      setIsCreating(false);
-    },
-  });
-
   const deleteProject = trpc.factory.projects.delete.useMutation({
     onSuccess: () => { toast.success("Project deleted"); refetch(); },
   });
-
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!youtubeUrl.trim()) { toast.error("Enter a YouTube URL"); return; }
-    setIsCreating(true);
-    createProject.mutate({ youtubeUrl: youtubeUrl.trim() });
-  };
 
   const activeProjects = projects?.filter(p => ["pending","transcribing","analyzing","generating"].includes(p.status)) || [];
   const completedProjects = projects?.filter(p => p.status === "completed") || [];
@@ -134,44 +111,47 @@ export default function Dashboard() {
         </div>
 
         <div className="p-6 space-y-8 max-w-5xl">
-          {/* NEW PROJECT FORM */}
+          {/* NEW PROJECT BUTTON */}
           <div className="bg-gradient-to-br from-primary/5 to-purple-500/5 border border-primary/20 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Plus className="w-5 h-5 text-primary" />
-              <h2 className="font-bold text-lg">New Project</h2>
-            </div>
-            <form onSubmit={handleCreate} className="flex gap-3">
-              <div className="flex-1 flex items-center gap-3 bg-background border border-border rounded-xl px-4">
-                <Youtube className="w-5 h-5 text-red-500 shrink-0" />
-                <Input
-                  type="url"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="border-0 bg-transparent focus-visible:ring-0 text-sm"
-                />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <h2 className="font-bold text-lg">Create New Ecosystem</h2>
               </div>
-              <Button type="submit" disabled={isCreating} className="shrink-0">
-                {isCreating ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Zap className="w-4 h-4 mr-2" />
-                )}
-                Generate Pack
+              <Button onClick={() => navigate("/create")} className="gap-2">
+                <Zap className="w-4 h-4" /> New Project
               </Button>
-            </form>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                { icon: Youtube, label: "YouTube", color: "text-red-500" },
+                { icon: Globe, label: "Web URL", color: "text-blue-500" },
+                { icon: FileText, label: "PDF", color: "text-orange-500" },
+                { icon: Mic, label: "Audio", color: "text-purple-500" },
+                { icon: Lightbulb, label: "AI Topic", color: "text-yellow-500" },
+              ].map(({ icon: Icon, label, color }) => (
+                <button
+                  key={label}
+                  onClick={() => navigate("/create")}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-background border border-border hover:border-primary/40 transition-colors"
+                >
+                  <Icon className={`w-5 h-5 ${color}`} />
+                  <span className="text-xs font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Generates 11 products + 6 games + 6 Canva designs automatically
+              10 source types · 21 product types · 6 games · Canva designs · Multi-format export
             </p>
           </div>
 
           {/* STATS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Projects", value: stats?.projects ?? 0, emoji: "📁", color: "text-blue-600" },
-              { label: "Completed", value: stats?.completed ?? 0, emoji: "✅", color: "text-green-600" },
-              { label: "Est. Products", value: stats?.products ?? 0, emoji: "📄", color: "text-purple-600" },
-              { label: "Est. Games", value: stats?.games ?? 0, emoji: "🎮", color: "text-orange-600" },
+              { label: "Projects", value: stats?.totalProjects ?? 0, emoji: "📁", color: "text-blue-600" },
+              { label: "Completed", value: stats?.completedProjects ?? 0, emoji: "✅", color: "text-green-600" },
+              { label: "Products", value: stats?.totalProducts ?? 0, emoji: "📄", color: "text-purple-600" },
+              { label: "Games", value: stats?.totalGames ?? 0, emoji: "🎮", color: "text-orange-600" },
             ].map((s) => (
               <div key={s.label} className="bg-card border border-border rounded-xl p-4 text-center">
                 <div className="text-2xl mb-1">{s.emoji}</div>
@@ -204,7 +184,7 @@ export default function Dashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{p.title || p.youtubeUrl}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {p.youtubeId && `youtube.com/watch?v=${p.youtubeId}`}
+                          {p.youtubeUrl ? `YouTube: ${p.title || "video"}` : p.sourceType}
                         </div>
                       </div>
                       <Badge className={`${cfg.color} border-0 shrink-0`}>
@@ -303,10 +283,10 @@ export default function Dashboard() {
               </div>
               <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
               <p className="text-muted-foreground text-sm mb-6">
-                Paste a YouTube URL above to generate your first teaching pack
+                Choose a source and generate your first teaching ecosystem
               </p>
-              <Button onClick={() => setYoutubeUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")}>
-                <Play className="w-4 h-4 mr-2" /> Try Demo Video
+              <Button onClick={() => navigate("/create")}>
+                <Zap className="w-4 h-4 mr-2" /> Create First Project
               </Button>
             </div>
           )}

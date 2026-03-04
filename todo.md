@@ -102,3 +102,51 @@
 - [ ] More game types (crossword, word search)
 - [ ] Custom branding per teacher
 - [ ] Marketplace integration (sell products)
+
+## 🔄 Multi-Source Engine (NOWE)
+- [x] Source: YouTube URL (istniejące — refactor do unified pipeline)
+- [x] Source: PDF upload (wyciąganie tekstu z PDF — podręcznik, artykuł)
+- [x] Source: Audio/Podcast upload (transkrypcja Whisper API)
+- [x] Source: Image/Screenshot upload (OCR + vision — np. zdjęcie tablicy, strony książki)
+- [x] Source: URL strony internetowej (web scraping — artykuł, Wikipedia, BBC Learning English)
+- [x] Source: Własny tekst (wklejenie tekstu bezpośrednio)
+- [x] Source: AI Topic Generator (podaj temat np. "Present Perfect B2" — AI generuje kontekst)
+- [x] Source: Notatka głosowa (nagranie w przeglądarce → Whisper)
+- [x] Source: Piosenka/Lyrics (music-based lessons)
+- [x] Multi-source combiner (połącz kilka źródeł w jeden projekt)
+
+## 🎯 Konteksty Generowania (NOWE)
+- [x] Poziom CEFR (A1-C2) — wybór lub auto-detect
+- [x] Wiek uczniów (Kids/Tweens/Teens/Young Adults/Adults/Mixed)
+- [x] Typ szkoły (Public/Private/Language/University/Online/Tutoring/Corporate/Homeschool)
+- [x] Cel lekcji (10 celów: Vocabulary, Grammar, Reading, Listening, Speaking, Writing, Exam, Culture, Pronunciation, Mixed)
+- [x] Styl nauczania (8 metod: Communicative, Grammar-Translation, Task-Based, Flipped, Project-Based, Test Prep, Conversation, Business)
+- [ ] Liczba uczniów (indywidualny, para, mała grupa 3-6, klasa 15-30)
+- [ ] Czas lekcji (30 min, 45 min, 60 min, 90 min)
+- [ ] Język ojczysty uczniów (polski, rosyjski, arabski, chiński, etc.)
+
+## 📦 Nowe Typy Produktów (NOWE)
+- [x] Crossword puzzle (krzyżówka ze słownictwa)
+- [x] Word Search (szukanie słów w siatce)
+- [x] Role-play scenario cards (karty do odgrywania ról)
+- [x] Pronunciation guide (wymowa, IPA, minimal pairs)
+- [x] Song/lyrics worksheet (jeśli źródłem jest piosenka)
+- [x] Debate cards (pro/con argument cards)
+- [x] Error correction worksheet (typowe błędy uczniów)
+- [x] Reading passage (graded reader — dostosowany do CEFR)
+- [x] Assessment rubric (karta oceny dla nauczyciela)
+- [x] Parent newsletter (informacja dla rodziców o temacie lekcji)
+- [ ] Certificate of completion (certyfikat dla ucznia)
+- [ ] Infographic vocabulary (visual vocabulary map)
+
+## 🖼️ AI Image Generation (NOWE)
+- [ ] Okładka produktu (AI-generated cover image)
+- [ ] Ilustracje do worksheetów
+- [ ] Avatary postaci do role-play
+- [ ] Tło do prezentacji Canva
+
+## 📤 Export & Marketplace (NOWE)
+- [ ] ZIP download (wszystkie produkty projektu)
+- [ ] Shareable product preview link (publiczny podgląd)
+- [ ] Marketplace card (gotowa karta produktu do Etsy/TPT/Gumroad)
+- [ ] Bundle creator (połącz kilka projektów w jeden pakiet)
