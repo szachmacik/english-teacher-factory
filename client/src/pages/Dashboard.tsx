@@ -10,7 +10,7 @@ import {
   Youtube, Zap, Plus, Clock, CheckCircle2, AlertCircle,
   Loader2, ArrowRight, Trash2, BookOpen, Gamepad2, LayoutDashboard,
   LogOut, Settings, ChevronRight, Play, RefreshCw,
-  Globe, FileText, Mic, Image, Lightbulb, Music, Layers, Sparkles
+  Globe, FileText, Mic, Image, Lightbulb, Music, Layers, Sparkles, BarChart3
 } from "lucide-react";
 import { useAuth as useCoreAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -61,6 +61,7 @@ export default function Dashboard() {
             { icon: Gamepad2, label: "Games", path: "/games" },
             { icon: Zap, label: "Bulk Factory", path: "/bulk" },
             { icon: Layers, label: "Orders & Revenue", path: "/orders" },
+            { icon: BarChart3, label: "Analytics", path: "/analytics" },
             { icon: Settings, label: "Settings", path: "/settings" },
           ].map((item) => (
             <button
@@ -148,7 +149,7 @@ export default function Dashboard() {
           </div>
 
           {/* QUICK ACTIONS */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={() => navigate("/bulk")}
               className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-pink-500/10 border border-violet-500/30 hover:border-violet-500/60 transition-colors text-left"
@@ -171,6 +172,18 @@ export default function Dashboard() {
               <div>
                 <p className="font-semibold text-sm">Orders &amp; Revenue</p>
                 <p className="text-xs text-muted-foreground">Stripe payments &amp; history</p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate("/analytics")}
+              className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 hover:border-blue-500/60 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Analytics</p>
+                <p className="text-xs text-muted-foreground">Production & game stats</p>
               </div>
             </button>
           </div>

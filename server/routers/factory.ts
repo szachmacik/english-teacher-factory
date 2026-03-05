@@ -8,11 +8,16 @@ import {
   gameScores,
   vocabularyItems,
   canvaDesigns,
+  gameSessions,
+  chatMessages,
 } from "../../drizzle/schema";
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, sql } from "drizzle-orm";
 import { runProductionPipeline } from "../services/pipeline";
 import { extractYouTubeId } from "../services/youtube";
 import { exportCanvaDesign, getCanvaDesign, generateSocialMediaPost, generateYouTubeThumbnail } from "../services/canva-mcp";
+import { generateImage } from "../_core/imageGeneration";
+import { invokeLLM } from "../_core/llm";
+import { nanoid } from "nanoid";
 
 export const factoryRouter = router({
   // ===== PROJECTS =====
@@ -45,14 +50,12 @@ export const factoryRouter = router({
     createFromSource: protectedProcedure
       .input(z.object({
         sourceType: z.enum(["youtube", "url", "pdf", "audio", "image", "text", "ai_topic", "voice_note", "google_doc", "multi"]),
-        // Source inputs (one or more depending on type)
         youtubeUrl: z.string().optional(),
         sourceUrl: z.string().optional(),
         sourceFileUrl: z.string().optional(),
         sourceFileName: z.string().optional(),
         sourceRawText: z.string().optional(),
-        sourceSources: z.array(z.string()).optional(), // for multi
-        // Context / configuration
+        sourceSources: z.array(z.string()).optional(),
         cefrLevel: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]).optional(),
         targetAge: z.enum(["young_learners", "teenagers", "young_adults", "adults", "seniors", "mixed"]).optional(),
         schoolType: z.enum(["public_school", "private_school", "language_school", "corporate", "online", "tutoring", "university"]).optional(),
@@ -69,7 +72,6 @@ export const factoryRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Validate source-specific required fields
         if (input.sourceType === "youtube" && !input.youtubeUrl) throw new Error("YouTube URL is required");
         if (input.sourceType === "url" && !input.sourceUrl) throw new Error("URL is required");
         if (input.sourceType === "google_doc" && !input.sourceUrl) throw new Error("Google Docs URL is required");
@@ -83,7 +85,6 @@ export const factoryRouter = router({
           status: "pending",
         };
 
-        // Copy all optional source fields
         if (input.youtubeUrl) insertValues.youtubeUrl = input.youtubeUrl;
         if (input.sourceUrl) insertValues.sourceUrl = input.sourceUrl;
         if (input.sourceFileUrl) insertValues.sourceFileUrl = input.sourceFileUrl;
@@ -92,7 +93,6 @@ export const factoryRouter = router({
         if (input.sourceSources) insertValues.sourceSources = input.sourceSources;
         if (input.title) insertValues.title = input.title;
         if (input.description) insertValues.description = input.description;
-        // Context
         if (input.cefrLevel) insertValues.cefrLevel = input.cefrLevel;
         if (input.targetAge) insertValues.targetAge = input.targetAge;
         if (input.schoolType) insertValues.schoolType = input.schoolType;
@@ -219,7 +219,7 @@ export const factoryRouter = router({
         if (input.format === "png") updateData.pngUrl = result.downloadUrl;
         if (input.format === "pptx") updateData.pptxUrl = result.downloadUrl;
         await db.update(products).set(updateData).where(eq(products.id, input.productId));
-        return { downloadUrl: result.downloadUrl, format: result.format };
+        return { downloadUrl: result.downloadUrl };
       }),
 
     listAll: protectedProcedure.query(async ({ ctx }) => {
@@ -227,10 +227,9 @@ export const factoryRouter = router({
       if (!db) return [];
       const userProjects = await db.select({ id: projects.id }).from(projects).where(eq(projects.userId, ctx.user!.id));
       if (userProjects.length === 0) return [];
-      const projectIds = userProjects.map((p) => p.id);
       const allProducts = [];
-      for (const pid of projectIds) {
-        const ps = await db.select().from(products).where(eq(products.projectId, pid));
+      for (const p of userProjects) {
+        const ps = await db.select().from(products).where(eq(products.projectId, p.id));
         allProducts.push(...ps);
       }
       return allProducts;
@@ -391,6 +390,260 @@ export const factoryRouter = router({
         if (!project) throw new Error("Access denied");
         return generateYouTubeThumbnail(project.title || "English Lesson", project.cefrLevel || "B1");
       }),
+  }),
+
+  // ===== COVER IMAGE =====
+  cover: router({
+    regenerate: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const [project] = await db.select().from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user!.id)));
+        if (!project) throw new Error("Project not found");
+        const topicStr = (project.topics as string[] | null)?.[0] || "English language";
+        const prompt = `Colorful educational cover image for an English lesson. Topic: "${project.title || topicStr}". Level: ${project.cefrLevel || "B1"}. Style: modern flat design, vibrant colors, educational icons, books, speech bubbles, no text, no letters.`;
+        const { url } = await generateImage({ prompt });
+        await db.update(projects).set({ coverImageUrl: url } as any).where(eq(projects.id, input.projectId));
+        return { coverImageUrl: url };
+      }),
+  }),
+
+  // ===== GAME SESSIONS (Teacher Share / Live Stats) =====
+  sessions: router({
+    submit: publicProcedure
+      .input(z.object({
+        gameId: z.number(),
+        playerName: z.string().min(1).max(100).default("Anonymous"),
+        score: z.number(),
+        maxScore: z.number(),
+        timeSeconds: z.number().optional(),
+        completed: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const certToken = input.completed ? nanoid(32) : undefined;
+        const [result] = await db.insert(gameSessions).values({
+          gameId: input.gameId,
+          playerName: input.playerName,
+          score: input.score,
+          maxScore: input.maxScore,
+          timeSeconds: input.timeSeconds ?? 0,
+          completed: input.completed ? 1 : 0,
+          certificateToken: certToken,
+        }).$returningId();
+        await db.update(games).set({ plays: sql`plays + 1` }).where(eq(games.id, input.gameId));
+        return { sessionId: (result as any).id, certificateToken: certToken };
+      }),
+
+    byGame: protectedProcedure
+      .input(z.object({ gameId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const [game] = await db.select().from(games).where(eq(games.id, input.gameId));
+        if (!game) return [];
+        const [project] = await db.select().from(projects)
+          .where(and(eq(projects.id, game.projectId), eq(projects.userId, ctx.user!.id)));
+        if (!project) return [];
+        return db.select().from(gameSessions)
+          .where(eq(gameSessions.gameId, input.gameId))
+          .orderBy(desc(gameSessions.createdAt))
+          .limit(100);
+      }),
+
+    byProject: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return { sessions: [], stats: { totalPlays: 0, avgScore: 0, completionRate: 0, topPlayers: [] as Array<{name: string; plays: number; bestScore: number}> } };
+        const [project] = await db.select().from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user!.id)));
+        if (!project) return { sessions: [], stats: { totalPlays: 0, avgScore: 0, completionRate: 0, topPlayers: [] as Array<{name: string; plays: number; bestScore: number}> } };
+        const projectGames = await db.select().from(games).where(eq(games.projectId, input.projectId));
+        const gameIds = projectGames.map(g => g.id);
+        if (gameIds.length === 0) return { sessions: [], stats: { totalPlays: 0, avgScore: 0, completionRate: 0, topPlayers: [] as Array<{name: string; plays: number; bestScore: number}> } };
+        const allSessions: typeof gameSessions.$inferSelect[] = [];
+        for (const gid of gameIds) {
+          const s = await db.select().from(gameSessions).where(eq(gameSessions.gameId, gid)).orderBy(desc(gameSessions.createdAt)).limit(50);
+          allSessions.push(...s);
+        }
+        const totalPlays = allSessions.length;
+        const avgScore = totalPlays > 0 ? Math.round(allSessions.reduce((sum, s) => sum + (s.maxScore > 0 ? (s.score / s.maxScore) * 100 : 0), 0) / totalPlays) : 0;
+        const completionRate = totalPlays > 0 ? Math.round((allSessions.filter(s => s.completed === 1).length / totalPlays) * 100) : 0;
+        const playerMap = new Map<string, { name: string; plays: number; bestScore: number }>();
+        for (const s of allSessions) {
+          const existing = playerMap.get(s.playerName) ?? { name: s.playerName, plays: 0, bestScore: 0 };
+          existing.plays++;
+          const pct = s.maxScore > 0 ? Math.round((s.score / s.maxScore) * 100) : 0;
+          if (pct > existing.bestScore) existing.bestScore = pct;
+          playerMap.set(s.playerName, existing);
+        }
+        const topPlayers = Array.from(playerMap.values()).sort((a, b) => b.bestScore - a.bestScore).slice(0, 10);
+        return { sessions: allSessions.slice(0, 50), stats: { totalPlays, avgScore, completionRate, topPlayers } };
+      }),
+
+    getCertificate: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const [session] = await db.select().from(gameSessions)
+          .where(eq(gameSessions.certificateToken, input.token));
+        if (!session) throw new Error("Certificate not found");
+        const [game] = await db.select().from(games).where(eq(games.id, session.gameId));
+        if (!game) throw new Error("Game not found");
+        const [project] = await db.select().from(projects).where(eq(projects.id, game.projectId));
+        return { session, game, project };
+      }),
+  }),
+
+  // ===== AI CHAT ASSISTANT =====
+  chat: router({
+    history: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const [project] = await db.select().from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user!.id)));
+        if (!project) return [];
+        return db.select().from(chatMessages)
+          .where(eq(chatMessages.projectId, input.projectId))
+          .orderBy(chatMessages.createdAt)
+          .limit(50);
+      }),
+
+    send: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        message: z.string().min(1).max(2000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const [project] = await db.select().from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user!.id)));
+        if (!project) throw new Error("Project not found");
+        await db.insert(chatMessages).values({
+          projectId: input.projectId,
+          userId: ctx.user!.id,
+          role: "user",
+          content: input.message,
+        } as any);
+        const history = await db.select().from(chatMessages)
+          .where(eq(chatMessages.projectId, input.projectId))
+          .orderBy(chatMessages.createdAt)
+          .limit(20);
+        const systemPrompt = `You are an expert English teaching assistant helping a teacher with their educational project.
+
+Project: "${project.title || "English Lesson"}"
+Source type: ${project.sourceType}
+CEFR Level: ${project.cefrLevel || "B1"}
+Target age: ${project.targetAge || "adults"}
+Lesson goal: ${project.lessonGoal || "general_english"}
+Teaching style: ${project.teachingStyle || "communicative"}
+Topics: ${(project.topics as string[] | null)?.join(", ") || "English"}
+
+You help teachers:
+- Modify and improve generated content
+- Suggest additional activities and differentiation strategies
+- Adapt materials for different levels or learning styles
+- Answer questions about teaching methodology (CLT, TBL, CLIL, etc.)
+- Provide feedback on lesson plans and worksheets
+- Suggest exam preparation strategies (FCE, IELTS, TOEFL)
+- Recommend resources and extensions
+
+Be concise, practical, and teacher-focused. Use markdown formatting. Always give actionable advice.`;
+
+        const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+          ...history.slice(-10).map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+        ];
+        const response = await invokeLLM({ messages });
+        const rawContent = response.choices?.[0]?.message?.content;
+        const assistantContent = typeof rawContent === "string" ? rawContent : "I apologize, I couldn't generate a response. Please try again.";
+        await db.insert(chatMessages).values({
+          projectId: input.projectId,
+          userId: ctx.user!.id,
+          role: "assistant",
+          content: assistantContent,
+        } as any);
+        return { content: assistantContent };
+      }),
+
+    clear: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const [project] = await db.select().from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user!.id)));
+        if (!project) throw new Error("Access denied");
+        await db.delete(chatMessages).where(eq(chatMessages.projectId, input.projectId));
+        return { success: true };
+      }),
+  }),
+
+  // ===== ANALYTICS =====
+  analytics: router({
+    overview: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return { projectsOverTime: [], productTypeBreakdown: [], topGames: [], studentActivity: [] };
+      const userProjects = await db.select().from(projects)
+        .where(eq(projects.userId, ctx.user!.id))
+        .orderBy(projects.createdAt);
+      const now = new Date();
+      // Projects over time (last 30 days)
+      const projectsOverTime: { date: string; count: number }[] = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0]!;
+        const cnt = userProjects.filter(p => p.createdAt.toISOString().startsWith(dateStr)).length;
+        projectsOverTime.push({ date: dateStr, count: cnt });
+      }
+      // Product type breakdown
+      const productTypeMap = new Map<string, number>();
+      for (const p of userProjects) {
+        const prods = await db.select({ type: products.type }).from(products).where(eq(products.projectId, p.id));
+        for (const prod of prods) {
+          productTypeMap.set(prod.type, (productTypeMap.get(prod.type) ?? 0) + 1);
+        }
+      }
+      const productTypeBreakdown = Array.from(productTypeMap.entries())
+        .map(([type, cnt]) => ({ type, count: cnt }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+      // Top games by plays
+      const allGames: typeof games.$inferSelect[] = [];
+      for (const p of userProjects) {
+        const g = await db.select().from(games).where(eq(games.projectId, p.id));
+        allGames.push(...g);
+      }
+      const topGames = allGames
+        .sort((a, b) => (b.plays ?? 0) - (a.plays ?? 0))
+        .slice(0, 5)
+        .map(g => ({ id: g.id, title: g.title, type: g.type, plays: g.plays ?? 0 }));
+      // Student activity (sessions per day, last 14 days)
+      const studentActivity: { date: string; sessions: number }[] = [];
+      const gameIds = allGames.map(g => g.id);
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0]!;
+        let sessionCount = 0;
+        for (const gid of gameIds) {
+          const s = await db.select({ id: gameSessions.id, createdAt: gameSessions.createdAt }).from(gameSessions)
+            .where(eq(gameSessions.gameId, gid));
+          sessionCount += s.filter(sess => sess.createdAt.toISOString().startsWith(dateStr)).length;
+        }
+        studentActivity.push({ date: dateStr, sessions: sessionCount });
+      }
+      return { projectsOverTime, productTypeBreakdown, topGames, studentActivity };
+    }),
   }),
 
   // ===== STATS =====

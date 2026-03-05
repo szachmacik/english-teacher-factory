@@ -4,10 +4,11 @@ import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProjectChatAssistant from "@/components/ProjectChatAssistant";
 import { toast } from "sonner";
 import { useState } from "react";
 import {
-  ArrowLeft, Youtube, BookOpen, Gamepad2, Download, ExternalLink,
+  ArrowLeft, Youtube, BookOpen, Gamepad2, Download, ExternalLink, Bot,
   CheckCircle2, Loader2, AlertCircle, Clock, FileText, Headphones,
   PenTool, Users, Sparkles, Copy, Share2, Trophy, Zap, RefreshCw,
   Eye, Edit3, Play, ShoppingBag
@@ -68,7 +69,7 @@ export default function ProjectDetail() {
       toast.success("Export ready!", {
         description: (
           <a href={result.downloadUrl} target="_blank" rel="noopener noreferrer" className="underline">
-            Download {result.format.toUpperCase()}
+            Download file
           </a>
         ) as any,
       });
@@ -191,6 +192,24 @@ export default function ProjectDetail() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => navigate(`/project/${projectId}/share`)}
+              className="gap-1.5 border-green-200 text-green-700 hover:bg-green-50"
+            >
+              <Users className="w-4 h-4" />
+              Teacher Share
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(`/project/${projectId}/certificates`)}
+              className="gap-1.5 border-yellow-200 text-yellow-700 hover:bg-yellow-50"
+            >
+              <Trophy className="w-4 h-4" />
+              Certificates
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => navigate(`/marketplace/${projectId}`)}
               className="gap-1.5 border-purple-200 text-purple-700 hover:bg-purple-50"
             >
@@ -273,6 +292,10 @@ export default function ProjectDetail() {
             <TabsTrigger value="canva" className="gap-2">
               <Zap className="w-4 h-4" />
               Canva Tools
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2">
+              <Bot className="w-4 h-4" />
+              AI Chat
             </TabsTrigger>
           </TabsList>
 
@@ -425,6 +448,15 @@ export default function ProjectDetail() {
 
           {/* VOCABULARY TAB */}
           <TabsContent value="vocabulary">
+            {vocabulary.length > 0 && (
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => navigate(`/project/${projectId}/flashcards`)}
+                  className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0">
+                  <Sparkles className="w-4 h-4" />
+                  Study with Flashcards (SM-2)
+                </Button>
+              </div>
+            )}
             {vocabulary.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {vocabulary.map((item) => (
@@ -564,6 +596,12 @@ export default function ProjectDetail() {
                   </div>
                 </div>
               )}
+            </div>
+          </TabsContent>
+          {/* AI CHAT TAB */}
+          <TabsContent value="chat">
+            <div className="h-[600px] flex flex-col">
+              <ProjectChatAssistant projectId={project.id} />
             </div>
           </TabsContent>
         </Tabs>

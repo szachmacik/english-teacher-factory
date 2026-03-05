@@ -15,6 +15,10 @@ import Settings from "./pages/Settings";
 import CreateProject from "./pages/CreateProject";
 import BulkFactory from "./pages/BulkFactory";
 import Orders from "./pages/Orders";
+import Analytics from "./pages/Analytics";
+import TeacherShare from "./pages/TeacherShare";
+import CertificateGenerator from "./pages/CertificateGenerator";
+import FlashcardStudy from "./pages/FlashcardStudy";
 function Router() {
   return (
     <Switch>
@@ -29,6 +33,10 @@ function Router() {
       <Route path={"/marketplace/:id"} component={Marketplace} />
       <Route path="/bulk" component={BulkFactory} />
       <Route path="/orders" component={Orders} />
+      <Route path="/analytics" component={Analytics} />
+      <Route path="/project/:id/share" component={TeacherShare} />
+      <Route path="/project/:id/certificates" component={CertificateGenerator} />
+      <Route path="/project/:id/flashcards" component={FlashcardStudy} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

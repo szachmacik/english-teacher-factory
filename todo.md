@@ -156,3 +156,54 @@
 - [ ] Nagrywanie głosowe w przeglądarce (Web Audio API → Whisper transcription)
 - [ ] Stripe Marketplace Card (strona sprzedażowa z ceną i podglądem produktów)
 - [ ] GitHub export z pełną dokumentacją wiedzy dla innych projektów Manus
+
+## 🚀 Sprint 5 — Autonomiczne rozbudowanie (bez zewnętrznych kluczy)
+
+### AI Image Generation (wbudowany Manus)
+- [ ] Auto-generowanie okładki projektu przy tworzeniu
+- [ ] Regeneruj okładkę przyciskiem w ProjectDetail
+- [ ] Okładki widoczne w Dashboard i Marketplace
+
+### Teacher Share & Live Stats
+- [ ] Publiczny link /share/:shareToken z wszystkimi grami projektu
+- [ ] Tabela game_sessions w DB (kto grał, wynik, czas)
+- [ ] Live leaderboard widoczny dla nauczyciela w ProjectDetail
+- [ ] Statystyki uczniów: liczba prób, średni wynik, czas gry
+
+### Analytics Dashboard
+- [ ] Strona /analytics z wykresami (Recharts)
+- [ ] Wykres produkcji projektów w czasie
+- [ ] Wykres popularności typów produktów
+- [ ] Wykres aktywności gier (top 5 gier)
+- [ ] Statystyki: łączna liczba produktów, gier, sesji uczniów
+
+### Certificate Generator
+- [ ] Strona /certificate/:gameId z generatorem certyfikatu
+- [ ] Auto-generowany certyfikat ukończenia gry (HTML → PDF)
+- [ ] Imię ucznia, nazwa gry, wynik, data, podpis nauczyciela
+- [ ] Przycisk "Get Certificate" w GamePlayer po ukończeniu
+
+### Vocabulary Flashcard Flipper
+- [ ] Strona /flashcards/:projectId z interaktywnym flipperem
+- [ ] Algorytm Spaced Repetition (SM-2) dla kart
+- [ ] Tryby: Flip, Multiple Choice, Type Answer
+- [ ] Postęp zapisywany w localStorage
+- [ ] Publiczny link dla uczniów
+
+### Nowe interaktywne narzędzia
+- [ ] Reading Timer — timer z WPM counter dla reading passages
+- [ ] Debate Score Tracker — punktacja dla debate cards
+- [ ] Pronunciation Audio Player — TTS dla vocabulary list
+- [ ] PDF Preview — podgląd produktu przed pobraniem
+
+### AI Chat Assistant w projekcie
+- [ ] Panel czatu w ProjectDetail (zakładka "AI Assistant")
+- [ ] Kontekst projektu wstrzykiwany do systemu
+- [ ] Pytania o projekt, modyfikacje treści, sugestie
+- [ ] Historia czatu zapisywana w DB
+
+### UX & Polish
+- [ ] Skeleton loading states dla wszystkich stron
+- [ ] Dark mode toggle
+- [ ] Mobile responsive fixes
+- [ ] Liczba uczniów i czas lekcji w kontekście generowania

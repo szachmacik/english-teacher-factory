@@ -334,3 +334,35 @@ export const bulkJobs = mysqlTable("bulk_jobs", {
 });
 export type BulkJob = typeof bulkJobs.$inferSelect;
 export type InsertBulkJob = typeof bulkJobs.$inferInsert;
+
+/**
+ * Game Sessions — detailed tracking of student play sessions
+ * Used for Teacher Share live stats and certificate generation
+ */
+export const gameSessions = mysqlTable("game_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  gameId: int("gameId").notNull(),
+  playerName: varchar("playerName", { length: 100 }).notNull().default("Anonymous"),
+  score: int("score").notNull().default(0),
+  maxScore: int("maxScore").notNull().default(0),
+  timeSeconds: int("timeSeconds").default(0),
+  completed: int("completed").default(0), // 0 = in progress, 1 = completed
+  certificateToken: varchar("certificateToken", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type GameSession = typeof gameSessions.$inferSelect;
+export type InsertGameSession = typeof gameSessions.$inferInsert;
+
+/**
+ * Chat Messages — AI Assistant conversation history per project
+ */
+export const chatMessages = mysqlTable("chat_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
