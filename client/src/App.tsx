@@ -19,10 +19,14 @@ import Analytics from "./pages/Analytics";
 import TeacherShare from "./pages/TeacherShare";
 import CertificateGenerator from "./pages/CertificateGenerator";
 import FlashcardStudy from "./pages/FlashcardStudy";
+import Login from "@/pages/Login";
+import AuthCallback from "@/pages/AuthCallback";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/login" element={<Login />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/project/:id" component={ProjectDetail} />
       <Route path="/game/:token" component={GamePlayer} />

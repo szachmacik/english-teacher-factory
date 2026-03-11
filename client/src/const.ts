@@ -15,3 +15,8 @@ export const getLoginUrl = () => {
 
   return url.toString();
 };
+
+
+export function getLoginUrl(): string {
+  return '/login';
+}
