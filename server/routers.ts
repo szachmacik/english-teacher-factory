@@ -7,6 +7,7 @@ import { stripeRouter } from "./routers/stripe";
 import { bulkRouter } from "./routers/bulk";
 import { verifySupabaseToken, isEmailAllowed, isEmailAdmin } from "./_core/supabaseAuth";
 import { SignJWT } from "jose";
+import { z } from "zod";
 
 export const appRouter = router({
   system: systemRouter,
