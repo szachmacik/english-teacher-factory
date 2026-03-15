@@ -25,9 +25,9 @@ RUN npm install -g pnpm@9
 COPY package.json pnpm-lock.yaml ./
 COPY patches/ ./patches/
 
-# Install all deps first (vite is imported at module level for dev server detection)
-RUN pnpm install --no-frozen-lockfile
+# Set NODE_ENV before install to ensure dev deps excluded
 ENV NODE_ENV=production
+RUN pnpm install --no-frozen-lockfile --prod
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
