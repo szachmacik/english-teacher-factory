@@ -1,3 +1,4 @@
+import { llmRouter } from "./llm";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -10,6 +11,7 @@ import { SignJWT } from "jose";
 import { z } from "zod";
 
 export const appRouter = router({
+  llm: llmRouter,
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
