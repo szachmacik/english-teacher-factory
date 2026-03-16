@@ -1,4 +1,4 @@
-import { llmRouter } from "./llm";
+import { llmRouter } from "./routers/llm";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
