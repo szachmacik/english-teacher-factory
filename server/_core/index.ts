@@ -156,7 +156,13 @@ async function startServer() {
     const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
-    app.use("/api/guardian", guardianRouter);
+  
+  // ── Health + Guardian (wymagane przez monitoring) ──────────────
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", version: process.env.npm_package_version || "1.0.0", timestamp: new Date().toISOString(), uptime: Math.floor(process.uptime()) });
+  });
+
+  app.use("/api/guardian", guardianRouter);
   serveStatic(app);
   }
 
