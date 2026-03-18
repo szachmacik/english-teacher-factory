@@ -22,4 +22,5 @@ COPY --from=builder /app/drizzle ./drizzle
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget -qO- http://localhost:${PORT:-3000}/api/health || exit 1
 EXPOSE 3000
+LABEL build="1773816993"
 CMD ["node", "dist/index.js"]
